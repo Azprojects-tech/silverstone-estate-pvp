@@ -1,0 +1,39 @@
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Dependencies (if using Node.js in future)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Local environment
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# OS specific
+__pycache__/
+*.pyc
+
+# Keep these important files
+!index.html
+!README.md
+!DEPLOYMENT_GUIDE.md
+!START_HERE.md
