@@ -4155,10 +4155,10 @@
             const parcelNumber = cleanParcelNumber(currentSelectedParcel);
             
             // Create WhatsApp message to A&Z Projects
-            const whatsappMessage = `🏡 NEW INQUIRY - Silverstone Estate Ogbeke%0A%0A📍 Interested in: Parcel ${parcelNumber}%0A💰 Listed Price: ₦3,000,000%0A%0A👤 Customer Details:%0A• Name: ${name}%0A• Phone: ${phone}%0A• Email: ${email}%0A%0A💬 Message: ${message || 'No additional message'}%0A%0A⏰ Inquiry sent: ${new Date().toLocaleString()}`;
+            const whatsappMessage = `🏡 NEW INQUIRY - Silverstone Estate Ogbeke%0A%0A📍 Interested in: Parcel ${parcelNumber}%0A💰 Listed Price: ₦3,500,000%0A%0A👤 Customer Details:%0A• Name: ${name}%0A• Phone: ${phone}%0A• Email: ${email}%0A%0A💬 Message: ${message || 'No additional message'}%0A%0A⏰ Inquiry sent: ${new Date().toLocaleString()}`;
             
             // Open WhatsApp to your number
-            window.open(`https://wa.me/2348039921371?text=${whatsappMessage}`, '_blank');
+            window.open(`https://wa.me/2348147042804?text=${whatsappMessage}`, '_blank');
             
             // Close modal
             closeContactModal();
@@ -4173,10 +4173,10 @@
             const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
             
             // Create direct message to your WhatsApp number
-            const message = `🏡 INQUIRY - Silverstone Estate Ogbeke%0A%0A📍 Interested in: Parcel ${parcelNumber}%0A💰 Listed Price: ₦3,000,000%0A📊 Status: ${statusLabel}%0A%0A👋 Hi! I'm interested in this parcel. Please provide more information.%0A%0A🗺️ Source: ${window.location.href}`;
+            const message = `🏡 INQUIRY - Silverstone Estate Ogbeke%0A%0A📍 Interested in: Parcel ${parcelNumber}%0A💰 Listed Price: ₦3,500,000%0A📊 Status: ${statusLabel}%0A%0A👋 Hi! I'm interested in this parcel. Please provide more information.%0A%0A🗺️ Source: ${window.location.href}`;
             
             // Open WhatsApp DIRECTLY to your number (not modal, not customer choice)
-            window.open(`https://wa.me/2348039921371?text=${message}`, '_blank');
+            window.open(`https://wa.me/2348147042804?text=${message}`, '_blank');
         }
         
         function shareOnWhatsApp(parcelId) {
@@ -4184,7 +4184,7 @@
             if (!selectedParcel) return;
             
             const parcelNumber = cleanParcelNumber(selectedParcel);
-            const message = `🏡 Check out this property at Silverstone Estate Ogbeke!%0A%0A📍 Parcel: ${parcelNumber}%0A💰 Price: ₦3,000,000%0A🌟 Premium location with excellent amenities%0A%0A🗺️ View interactive map: ${window.location.href}%0A%0A📞 Contact us for more info: +234 803 992 1371`;
+            const message = `🏡 Check out this property at Silverstone Estate Ogbeke!%0A%0A📍 Parcel: ${parcelNumber}%0A💰 Price: ₦3,500,000%0A🌟 Premium location with excellent amenities%0A%0A🗺️ View interactive map: ${window.location.href}%0A%0A📞 Contact us for more info: +234 814 704 2804`;
             window.open(`https://wa.me/?text=${message}`, '_blank');
         }
         
@@ -4347,7 +4347,7 @@
             
             // Use database area and price if available, otherwise fallback to feature properties
             const area = parcelData.areaSqm ? `${parcelData.areaSqm} sqm` : (feature.properties.area || '450 sqm');
-            const price = parcelData.priceNaira ? formatPrice(parcelData.priceNaira) : (feature.properties.price || '₦3,000,000');
+            const price = parcelData.priceNaira ? formatPrice(parcelData.priceNaira) : (feature.properties.price || '₦3,500,000');
             
             // Calculate center coordinates for this parcel
             const parcelBounds = L.geoJSON(feature).getBounds();
@@ -5885,7 +5885,7 @@ P003        | reserved  | 2025-08-27</pre>
             
             // CASH FLOW ANALYSIS: Calculate Revenue Generated (Sold) and Revenue Expected (Reserved)
             const revenueGenerated = soldParcels.reduce((sum, id) => {
-                let price = parseFloat(parcelDatabase[id].priceNaira) || 3000000; // Default to 3M if not specified
+                let price = parseFloat(parcelDatabase[id].priceNaira) || 3500000; // Default to 3.5M if not specified
                 if (price > 0 && price < 1000) {
                     price = price * 1000000;
                 }
@@ -5893,7 +5893,7 @@ P003        | reserved  | 2025-08-27</pre>
             }, 0);
             
             const revenueExpected = reservedParcels.reduce((sum, id) => {
-                let price = parseFloat(parcelDatabase[id].priceNaira) || 3000000; // Default to 3M if not specified
+                let price = parseFloat(parcelDatabase[id].priceNaira) || 3500000; // Default to 3.5M if not specified
                 if (price > 0 && price < 1000) {
                     price = price * 1000000;
                 }
@@ -5902,7 +5902,7 @@ P003        | reserved  | 2025-08-27</pre>
             
             // Calculate potential total revenue (all 51 parcels at Silverstone price)
             const totalParcels = allParcels.length || 51;
-            const defaultPrice = 3000000; // Silverstone Estate price
+            const defaultPrice = 3500000; // Silverstone Estate price
             const totalPotentialRevenue = totalParcels * defaultPrice;
             const remainingRevenuePotential = totalPotentialRevenue - revenueGenerated - revenueExpected;
             
