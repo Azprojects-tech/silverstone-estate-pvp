@@ -3825,7 +3825,7 @@
         async function syncWithGoogleSheetsQuiet() {
             try {
                 const response = await fetch(
-                    `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.range}?key=${GOOGLE_SHEETS_CONFIG.apiKey}`
+                    `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A2:L?key=${GOOGLE_SHEETS_CONFIG.apiKey}`
                 );
                 
                 if (response.ok) {
