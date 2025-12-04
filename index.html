@@ -4233,7 +4233,7 @@
             
             // ENHANCED: Always fetch fresh data from Google Sheets for popup
             try {
-                await loadDataFromGoogleSheets(); // Refresh data before showing popup
+                await loadPublicParcelStatuses(); // Refresh data before showing popup
             } catch (error) {
                 console.log('Could not refresh data, using cached data');
             }
