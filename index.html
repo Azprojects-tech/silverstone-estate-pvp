@@ -5345,8 +5345,8 @@ P003        | reserved  | 2025-08-27</pre>
             console.log('🌍 Loading public parcel statuses...');
             
             try {
-                // Enhanced API call to read full database structure (A through L)
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A2:L?key=${GOOGLE_SHEETS_CONFIG.apiKey}`;
+                // FLEXIBLE: Fetch ALL data to detect headers dynamically
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}?key=${GOOGLE_SHEETS_CONFIG.apiKey}`;
                 
                 const response = await fetch(url);
                 
@@ -5356,84 +5356,112 @@ P003        | reserved  | 2025-08-27</pre>
                 }
                 
                 const data = await response.json();
-                console.log('📋 Public parcel data loaded:', data.values?.length || 0, 'parcels');
+                console.log('📋 Public parcel data loaded:', data.values?.length || 0, 'rows');
                 
-                if (!data.values || data.values.length === 0) {
+                if (!data.values || data.values.length < 2) {
+                    console.log('⚠️ No data rows found (need at least header + 1 data row)');
                     return;
                 }
                 
+                // FLEXIBLE: Auto-detect column positions from header row
+                const headers = data.values[0];
+                const columnMap = {};
+                headers.forEach((header, index) => {
+                    const normalized = String(header || '').toLowerCase().trim();
+                    columnMap[normalized] = index;
+                    console.log(`  Column ${index}: "${header}" → normalized: "${normalized}"`);
+                });
+                
+                // Find key columns (flexible matching)
+                const parcelIdCol = columnMap['parcelid'] || columnMap['parcel id'] || columnMap['parcel_id'] || columnMap['id'] || 0;
+                const statusCol = columnMap['status'] || 1;
+                const buyerCol = columnMap['buyer_name'] || columnMap['buyer name'] || columnMap['purchaser_name'] || columnMap['purchaser name'] || 2;
+                const phoneCol = columnMap['contact_phone'] || columnMap['phone'] || columnMap['contact phone'] || 3;
+                const emailCol = columnMap['email_address'] || columnMap['email'] || columnMap['email address'] || 4;
+                const purchaseCol = columnMap['purchase_id'] || columnMap['purchase id'] || columnMap['purchaseid'] || 5;
+                const displayCol = columnMap['display_preference'] || columnMap['display preference'] || 6;
+                const areaCol = columnMap['area_sqm'] || columnMap['area'] || columnMap['area_sqm'] || 7;
+                const priceCol = columnMap['price_naira'] || columnMap['price'] || columnMap['price naira'] || columnMap['priceNaira'] || 8;
+                const dateCol = columnMap['sale_date'] || columnMap['date'] || columnMap['sale date'] || 9;
+                const feeCol = columnMap['service_fee_due'] || columnMap['fee'] || columnMap['service fee'] || 10;
+                const paymentCol = columnMap['payment_status'] || columnMap['payment'] || columnMap['payment status'] || 11;
+                
+                console.log('✅ Column mapping:', {parcelIdCol, statusCol, priceCol, buyerCol});
+                
                 let updatedCount = 0;
                 
-                // ENHANCED: Process each row and update database
-                for (let i = 0; i < data.values.length; i++) {
+                // FLEXIBLE: Process ALL data rows (not just 51)
+                for (let i = 1; i < data.values.length; i++) {
                     const row = data.values[i];
-                    if (row.length >= 2) {
-                        const parcelId = String(row[0]).trim();
-                        const newStatus = String(row[1]).toLowerCase().trim();
+                    if (row.length > 0 && row[parcelIdCol]) {
+                        const parcelId = String(row[parcelIdCol] || '').trim();
+                        const newStatus = String(row[statusCol] || 'available').toLowerCase().trim();
                         
+                        // Allow any status value, not just ['available', 'reserved', 'sold']
+                        const oldStatus = parcelStatus[parcelId];
+                        
+                        // Store in Google Sheets data (the REAL source of truth)
+                        googleSheetsData[parcelId] = newStatus;
+                        
+                        // FLEXIBLE: Store complete database record with ANY data
+                        parcelDatabase[parcelId] = {
+                            status: newStatus,
+                            purchaserName: String(row[buyerCol] || '').trim(),
+                            phoneNumber: String(row[phoneCol] || '').trim(),
+                            emailAddress: String(row[emailCol] || '').trim(),
+                            purchaseId: String(row[purchaseCol] || '').trim(),
+                            displayPreference: (String(row[displayCol] || 'none').toLowerCase()).trim(),
+                            areaSqm: String(row[areaCol] || '').trim(),
+                            priceNaira: String(row[priceCol] || '').trim(), // Keep as string for flexible formatting
+                            saleDate: String(row[dateCol] || '').trim(),
+                            serviceFeeDue: parseFloat(row[feeCol]) || 0,
+                            paymentStatus: (String(row[paymentCol] || 'pending').toLowerCase()).trim()
+                        };
+                        
+                        // Also update local cache for backwards compatibility
                         if (['available', 'reserved', 'sold'].includes(newStatus)) {
-                            const oldStatus = parcelStatus[parcelId];
-                            
-                            // Store in Google Sheets data (the REAL source of truth)
-                            googleSheetsData[parcelId] = newStatus;
-                            
-                            // ENHANCED: Store complete database record
-                            parcelDatabase[parcelId] = {
-                                status: newStatus,
-                                purchaserName: row[2] || '',
-                                phoneNumber: row[3] || '',
-                                emailAddress: row[4] || '',
-                                purchaseId: row[5] || '',
-                                displayPreference: (row[6] || 'none').toLowerCase(),
-                                areaSqm: row[7] || '',
-                                priceNaira: row[8] || '',
-                                saleDate: row[9] || '',
-                                serviceFeeDue: parseFloat(row[10]) || 0,
-                                paymentStatus: (row[11] || 'pending').toLowerCase()
-                            };
-                            
-                            // Also update local cache for backwards compatibility
                             parcelStatus[parcelId] = newStatus;
-                            
-                            // Update map colors immediately
-                            const colors = {
-                                'available': '#28a745',
-                                'reserved': '#ffc107', 
-                                'sold': '#dc3545'
-                            };
-                            
-                            // Search through parcelLayers array and their sub-layers
-                            parcelLayers.forEach(layer => {
-                                if (layer._layers) {
-                                    Object.values(layer._layers).forEach(subLayer => {
-                                        if (subLayer.feature?.properties?.Text === parcelId) {
-                                            subLayer.setStyle({
-                                                fillColor: colors[newStatus],
-                                                color: '#ffffff',
-                                                weight: 2,
-                                                opacity: 1,
-                                                fillOpacity: 0.7
-                                            });
-                                            updatedCount++;
-                                            
-                                            // Show change notification for real-time updates
-                                            if (showIndicator && oldStatus && oldStatus !== newStatus) {
-                                                showChangeNotification({
-                                                    parcel: parcelId,
-                                                    oldStatus: oldStatus,
-                                                    newStatus: newStatus,
-                                                    changedBy: 'Auto-sync'
-                                                });
-                                            }
-                                        }
-                                    });
-                                }
-                            });
                         }
+                        
+                        // Update map colors immediately (flexible status handling)
+                        const colors = {
+                            'available': '#28a745',
+                            'reserved': '#ffc107', 
+                            'sold': '#dc3545'
+                        };
+                        const color = colors[newStatus] || '#999999'; // Gray for unknown status
+                        
+                        // Search through parcelLayers array and their sub-layers
+                        parcelLayers.forEach(layer => {
+                            if (layer._layers) {
+                                Object.values(layer._layers).forEach(subLayer => {
+                                    if (subLayer.feature?.properties?.Text === parcelId) {
+                                        subLayer.setStyle({
+                                            fillColor: color,
+                                            color: '#ffffff',
+                                            weight: 2,
+                                            opacity: 1,
+                                            fillOpacity: 0.7
+                                        });
+                                        updatedCount++;
+                                        
+                                        // Show change notification for real-time updates
+                                        if (showIndicator && oldStatus && oldStatus !== newStatus) {
+                                            showChangeNotification({
+                                                parcel: parcelId,
+                                                oldStatus: oldStatus,
+                                                newStatus: newStatus,
+                                                changedBy: 'Auto-sync'
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        });
                     }
                 }
                 
-                console.log(`🌍 Public parcel statuses updated: ${updatedCount} parcels`);
+                console.log(`✅ Public parcel statuses updated: ${updatedCount} parcels processed`);
                 
             } catch (error) {
                 console.log('⚠️ Public parcel status loading failed:', error.message);
