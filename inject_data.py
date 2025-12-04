@@ -1,7 +1,7 @@
 import json
 
 # Read converted subdivision data
-with open('subdivision_data.json', 'r') as f:
+with open('subdivision_data.json', 'r', encoding='utf-8') as f:
     subdivision_data = json.load(f)
 
 # Read the current index.html
@@ -36,7 +36,7 @@ end_idx = last_brace + 2
 
 # Create the replacement text
 replacement = f'''// Embedded WGS84 GeoJSON data - SILVERSTONE ESTATE OGBEKE PARCELS ({len(subdivision_data["features"])} parcels)
-        const subdivisionData = {json.dumps(subdivision_data, indent=12)};'''
+        const subdivisionData = {json.dumps(subdivision_data, indent=12, ensure_ascii=False)};'''
 
 # Replace in HTML
 html_content = html_content[:start_idx] + replacement + html_content[end_idx:]
