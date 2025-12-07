@@ -5377,7 +5377,6 @@ P003        | reserved  | 2025-08-27</pre>
                 headers.forEach((header, index) => {
                     const normalized = String(header || '').toLowerCase().trim();
                     columnMap[normalized] = index;
-                    console.log(`  Column ${index}: "${header}" → normalized: "${normalized}"`);
                 });
                 
                 // Find key columns (flexible matching)
@@ -5394,8 +5393,7 @@ P003        | reserved  | 2025-08-27</pre>
                 const feeCol = columnMap['service_fee_due'] || columnMap['fee'] || columnMap['service fee'] || 10;
                 const paymentCol = columnMap['payment_status'] || columnMap['payment'] || columnMap['payment status'] || 11;
                 
-                console.log('✅ Column mapping:', {parcelIdCol, statusCol, priceCol, buyerCol});
-                console.log('🔍 First 3 rows for debugging:');
+                console.log('✅ Detected columns - ParcelID:', parcelIdCol, 'Price:', priceCol);
                 
                 let updatedCount = 0;
                 
@@ -5406,11 +5404,6 @@ P003        | reserved  | 2025-08-27</pre>
                         const parcelId = String(row[parcelIdCol] || '').trim();
                         const newStatus = String(row[statusCol] || 'available').toLowerCase().trim();
                         const priceValue = String(row[priceCol] || '').trim();
-                        
-                        // Log first 3 parcels for debugging
-                        if (i <= 3) {
-                            console.log(`   Row ${i}: ID=${parcelId}, Status=${newStatus}, Price="${priceValue}"`);
-                        }
                         
                         // Allow any status value, not just ['available', 'reserved', 'sold']
                         const oldStatus = parcelStatus[parcelId];
