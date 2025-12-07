@@ -4234,14 +4234,8 @@
             const parcelId = feature.properties.Text.trim();
             const parcelNumber = cleanParcelNumber(parcelId);
             
-            // ENHANCED: Always fetch fresh data from Google Sheets for popup
-            try {
-                await loadPublicParcelStatuses(); // Refresh data before showing popup
-            } catch (error) {
-                console.log('Could not refresh data, using cached data');
-            }
-            
-            // Get enhanced parcel data from database (now freshly loaded)
+            // Use cached data from parcelDatabase (loaded once on page load)
+            // NO MORE API CALLS ON EVERY POPUP - This was causing the lag!
             const parcelData = getParcelData(parcelId);
             const status = getRealParcelStatus(parcelId);
             const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -4249,11 +4243,6 @@
             // Use database area and price if available, otherwise fallback to feature properties
             const area = parcelData.areaSqm ? `${parcelData.areaSqm} sqm` : (feature.properties.area || '450 sqm');
             const price = parcelData.priceNaira ? formatPrice(parcelData.priceNaira) : (feature.properties.price || '₦3,500,000');
-            
-            // DEBUG: Log what's happening with the price
-            console.log(`🏡 Popup for ${parcelId}:`);
-            console.log(`   Raw priceNaira from DB: "${parcelData.priceNaira}"`);
-            console.log(`   Formatted price shown: "${price}"`);
             
             // Calculate center coordinates for this parcel
             const parcelBounds = L.geoJSON(feature).getBounds();
