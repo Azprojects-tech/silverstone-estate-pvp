@@ -4247,6 +4247,11 @@
             const area = parcelData.areaSqm ? `${parcelData.areaSqm} sqm` : (feature.properties.area || '450 sqm');
             const price = parcelData.priceNaira ? formatPrice(parcelData.priceNaira) : (feature.properties.price || '₦3,500,000');
             
+            // DEBUG: Log what's happening with the price
+            console.log(`🏡 Popup for ${parcelId}:`);
+            console.log(`   Raw priceNaira from DB: "${parcelData.priceNaira}"`);
+            console.log(`   Formatted price shown: "${price}"`);
+            
             // Calculate center coordinates for this parcel
             const parcelBounds = L.geoJSON(feature).getBounds();
             const parcelCenter = parcelBounds.getCenter();
@@ -5381,12 +5386,13 @@ P003        | reserved  | 2025-08-27</pre>
                 const purchaseCol = columnMap['purchase_id'] || columnMap['purchase id'] || columnMap['purchaseid'] || 5;
                 const displayCol = columnMap['display_preference'] || columnMap['display preference'] || 6;
                 const areaCol = columnMap['area_sqm'] || columnMap['area'] || columnMap['area_sqm'] || 7;
-                const priceCol = columnMap['price_naira'] || columnMap['price'] || columnMap['price naira'] || columnMap['priceNaira'] || 8;
+                const priceCol = columnMap['price'] || columnMap['price_naira'] || columnMap['price naira'] || columnMap['pricenaira'] || 8;
                 const dateCol = columnMap['sale_date'] || columnMap['date'] || columnMap['sale date'] || 9;
                 const feeCol = columnMap['service_fee_due'] || columnMap['fee'] || columnMap['service fee'] || 10;
                 const paymentCol = columnMap['payment_status'] || columnMap['payment'] || columnMap['payment status'] || 11;
                 
                 console.log('✅ Column mapping:', {parcelIdCol, statusCol, priceCol, buyerCol});
+                console.log('🔍 First 3 rows for debugging:');
                 
                 let updatedCount = 0;
                 
@@ -5396,6 +5402,12 @@ P003        | reserved  | 2025-08-27</pre>
                     if (row.length > 0 && row[parcelIdCol]) {
                         const parcelId = String(row[parcelIdCol] || '').trim();
                         const newStatus = String(row[statusCol] || 'available').toLowerCase().trim();
+                        const priceValue = String(row[priceCol] || '').trim();
+                        
+                        // Log first 3 parcels for debugging
+                        if (i <= 3) {
+                            console.log(`   Row ${i}: ID=${parcelId}, Status=${newStatus}, Price="${priceValue}"`);
+                        }
                         
                         // Allow any status value, not just ['available', 'reserved', 'sold']
                         const oldStatus = parcelStatus[parcelId];
@@ -5412,7 +5424,7 @@ P003        | reserved  | 2025-08-27</pre>
                             purchaseId: String(row[purchaseCol] || '').trim(),
                             displayPreference: (String(row[displayCol] || 'none').toLowerCase()).trim(),
                             areaSqm: String(row[areaCol] || '').trim(),
-                            priceNaira: String(row[priceCol] || '').trim(), // Keep as string for flexible formatting
+                            priceNaira: priceValue, // Keep as string for flexible formatting
                             saleDate: String(row[dateCol] || '').trim(),
                             serviceFeeDue: parseFloat(row[feeCol]) || 0,
                             paymentStatus: (String(row[paymentCol] || 'pending').toLowerCase()).trim()
