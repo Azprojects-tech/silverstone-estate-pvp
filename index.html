@@ -3114,15 +3114,18 @@
         function formatPrice(priceValue) {
             if (!priceValue) return '₦0';
             
-            const num = parseFloat(priceValue);
+            // Remove commas and any other formatting FIRST
+            const cleanPrice = String(priceValue).replace(/[^0-9.]/g, '');
+            const num = parseFloat(cleanPrice);
             if (isNaN(num)) return '₦0';
             
-            // If number is less than 1M, it's likely stored in millions (12 = 12M)
+            // If number is less than 1000, it's likely in thousands (like 450 for 450 sqm area, or 12 for 12M)
+            // Numbers >= 1000 are already in full naira amount
             if (num > 0 && num < 1000) {
                 return '₦' + (num * 1000000).toLocaleString();
             }
             
-            // If it's already a large number, format normally
+            // If it's already a large number (e.g., 3500000), format and display as-is
             return '₦' + num.toLocaleString();
         }
         
