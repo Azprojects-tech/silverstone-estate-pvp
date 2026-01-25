@@ -1228,6 +1228,8 @@
             <button class="btn" onclick="showDatabasePanel()" style="background: #6f42c1; color: white;">🗃️ Database</button>
             <button class="btn" onclick="testGoogleSheetsConnection()" style="background: #ffc107; color: #212529;">🔍 Test Connection</button>
             <button class="btn" onclick="testSyncMessages()" style="background: #28a745;">💬 Test Messages</button>
+            <button class="btn" onclick="showMarketerPanel()" style="background: #17a2b8; color: white;">💼 Marketers</button>
+            <button class="btn" onclick="showTerritoryPanel()" style="background: #fd7e14; color: white;">📍 Territory</button>
             <button class="attribution-toggle" onclick="toggleAttribution()" id="attributionToggle">ℹ️ Info</button>
         </div>
     </div>
@@ -4300,6 +4302,259 @@
         let isClientAuthenticated = false;
         const CLIENT_PASSWORD = 'azprojects2025'; // Change this to a secure password
         
+        // ===== SYSTEM 1: REFERRAL LINK TRACKING =====
+        class ReferralSystem {
+          constructor() {
+            this.referralSource = this.detectReferral();
+            this.storageKey = 'pvp_referral_source';
+            console.log(`🎯 ReferralSystem initialized. Current source: ${this.referralSource || 'Direct visit'}`);
+          }
+
+          detectReferral() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const marketer = urlParams.get('marketer');
+            
+            if (marketer) {
+              sessionStorage.setItem(this.storageKey, marketer);
+              console.log(`✅ Referral detected from: ${marketer}`);
+              return marketer;
+            }
+            
+            const stored = sessionStorage.getItem(this.storageKey);
+            if (stored) {
+              console.log(`✅ Continuing session from: ${stored}`);
+              return stored;
+            }
+            
+            return null;
+          }
+
+          getReferralSource() {
+            return this.referralSource;
+          }
+
+          isReferralSession() {
+            return this.referralSource !== null;
+          }
+
+          getDisplayInfo() {
+            if (this.referralSource) {
+              return `📱 Referred by: <strong>${this.referralSource}</strong>`;
+            }
+            return `📱 Direct visit`;
+          }
+        }
+        
+        // ===== SYSTEM 2: TERRITORY ASSIGNMENT =====
+        class TerritoryManager {
+          constructor(spreadsheetId, apiKey) {
+            this.spreadsheetId = spreadsheetId;
+            this.apiKey = apiKey;
+            this.territoriesSheet = 'TERRITORIES';
+            this.territories = new Map();
+            this.loadTerritories();
+          }
+
+          async loadTerritories() {
+            try {
+              const range = `${this.territoriesSheet}!A:B`;
+              const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?key=${this.apiKey}`;
+              const response = await fetch(url);
+              const data = await response.json();
+              
+              if (data.values && data.values.length > 1) {
+                for (let i = 1; i < data.values.length; i++) {
+                  const [plotId, marketerName] = data.values[i];
+                  if (plotId && marketerName) {
+                    this.territories.set(plotId.trim(), marketerName.trim());
+                  }
+                }
+              }
+              console.log(`✅ Loaded ${this.territories.size} territory assignments`);
+            } catch (error) {
+              console.error('Failed to load territories:', error);
+            }
+          }
+
+          getMarketerForPlot(plotId) {
+            return this.territories.get(plotId) || null;
+          }
+
+          async assignTerritory(plotId, marketerName) {
+            this.territories.set(plotId, marketerName);
+            console.log(`📍 Territory assigned: ${plotId} → ${marketerName}`);
+            // In production, would save to Google Sheet via Apps Script
+          }
+
+          async removeTerritory(plotId) {
+            this.territories.delete(plotId);
+            console.log(`📍 Territory removed: ${plotId}`);
+          }
+
+          getAllTerritories() {
+            return Array.from(this.territories.entries()).map(([plotId, marketer]) => ({
+              plotId,
+              marketer
+            }));
+          }
+        }
+        
+        // ===== SYSTEM 3: MARKETER MANAGEMENT =====
+        class MarketerManager {
+          constructor(spreadsheetId, apiKey) {
+            this.spreadsheetId = spreadsheetId;
+            this.apiKey = apiKey;
+            this.marketersSheet = 'MARKETERS';
+            this.marketers = [];
+            this.loadMarketers();
+          }
+
+          async loadMarketers() {
+            try {
+              const range = `${this.marketersSheet}!A:D`;
+              const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?key=${this.apiKey}`;
+              const response = await fetch(url);
+              const data = await response.json();
+              
+              if (data.values && data.values.length > 1) {
+                for (let i = 1; i < data.values.length; i++) {
+                  const [name, phone, commission, status] = data.values[i];
+                  if (name && phone) {
+                    this.marketers.push({
+                      name: name.trim(),
+                      phone: phone.trim(),
+                      commission: parseInt(commission) || 0,
+                      status: status || 'Active'
+                    });
+                  }
+                }
+              }
+              console.log(`✅ Loaded ${this.marketers.length} marketers`);
+            } catch (error) {
+              console.error('Failed to load marketers:', error);
+            }
+          }
+
+          getAll() {
+            return this.marketers;
+          }
+
+          getByName(name) {
+            return this.marketers.find(m => m.name.toLowerCase() === name.toLowerCase());
+          }
+
+          async addMarketer(name, phone, commission) {
+            this.marketers.push({
+              name,
+              phone,
+              commission: parseInt(commission) || 0,
+              status: 'Active'
+            });
+            console.log(`✅ Marketer added: ${name}`);
+          }
+
+          async removeMarketer(name) {
+            this.marketers = this.marketers.filter(m => m.name !== name);
+            console.log(`✅ Marketer removed: ${name}`);
+          }
+        }
+        
+        // ===== SYSTEM 4: COMMISSION CALCULATOR =====
+        class CommissionCalculator {
+          constructor(referralSystem, territoryManager, marketerManager) {
+            this.referral = referralSystem;
+            this.territory = territoryManager;
+            this.marketers = marketerManager;
+          }
+
+          determineCommissionRecipient(plotId, customerInfo) {
+            // PRIORITY 1: Territory Assignment
+            const territoryMarketer = this.territory.getMarketerForPlot(plotId);
+            if (territoryMarketer) {
+              const marketertData = this.marketers.getByName(territoryMarketer);
+              if (marketertData) {
+                console.log(`✅ Commission → ${territoryMarketer} (territory owner)`);
+                return {
+                  marketer: territoryMarketer,
+                  source: 'territory',
+                  phone: marketertData.phone,
+                  commission: marketertData.commission
+                };
+              }
+            }
+
+            // PRIORITY 2: Referral Link
+            const referralMarketer = this.referral.getReferralSource();
+            if (referralMarketer) {
+              const marketerData = this.marketers.getByName(referralMarketer);
+              if (marketerData) {
+                console.log(`✅ Commission → ${referralMarketer} (referral source)`);
+                return {
+                  marketer: referralMarketer,
+                  source: 'referral',
+                  phone: marketerData.phone,
+                  commission: marketerData.commission
+                };
+              }
+            }
+
+            console.log(`ℹ️ No commission (no territory or referral)`);
+            return null;
+          }
+
+          calculateCommission(plotId, salePrice, customerInfo) {
+            const recipient = this.determineCommissionRecipient(plotId, customerInfo);
+            
+            if (!recipient) {
+              return {
+                hasCommission: false,
+                marketer: null,
+                amount: 0
+              };
+            }
+
+            return {
+              hasCommission: true,
+              marketer: recipient.marketer,
+              marketerPhone: recipient.phone,
+              source: recipient.source,
+              commissionAmount: recipient.commission,
+              message: `✅ ${recipient.marketer} earned ₦${recipient.commission.toLocaleString('en-NG')} for ${plotId} sale`
+            };
+          }
+        }
+        
+        // ===== SYSTEM 5: REFERRAL LINK GENERATOR =====
+        class ReferralLinkGenerator {
+          constructor(baseUrl) {
+            this.baseUrl = baseUrl || window.location.origin + window.location.pathname;
+          }
+
+          generateLink(marketerName) {
+            const slug = marketerName
+              .toLowerCase()
+              .replace(/\s+/g, '-')
+              .replace(/[^a-z0-9-]/g, '');
+            
+            return `${this.baseUrl}?marketer=${slug}`;
+          }
+
+          generateAllLinks(marketers) {
+            const links = {};
+            marketers.forEach(marketer => {
+              links[marketer.name] = this.generateLink(marketer.name);
+            });
+            return links;
+          }
+        }
+        
+        // Initialize systems
+        const referralSystem = new ReferralSystem();
+        const territoryMgr = new TerritoryManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
+        const marketerMgr = new MarketerManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
+        const commissionCalc = new CommissionCalculator(referralSystem, territoryMgr, marketerMgr);
+        const referralLinkGen = new ReferralLinkGenerator();
+        
         // SIMPLIFIED Google Sheets Configuration - BUSINESS ACCOUNT
         const GOOGLE_SHEETS_CONFIG = {
             spreadsheetId: '1S5DaLtj6ZrZXKfGAuZh2VKjKKDAlHouNYzxn6Sj7UFM', // CORRECTED - Your actual public sheet
@@ -4740,6 +4995,18 @@
         async function updateGoogleSheets(parcelId, status, changedBy) {
             try {
                 console.log(`?? Attempting Google Sheets update: ${parcelId} -> ${status} (by ${changedBy})`);
+                
+                // ===== NEW: COMMISSION CALCULATION =====
+                if (status === 'sold') {
+                    const commission = commissionCalc.calculateCommission(parcelId, 0, {});
+                    if (commission.hasCommission) {
+                        console.log(`💰 COMMISSION CALCULATED: ${commission.message}`);
+                        // Here you would send WhatsApp alert, but note: requires WhatsApp API integration
+                        // For now, just log it
+                        console.log(`📱 Would send to: ${commission.marketerPhone}`);
+                        console.log(`📊 Source: ${commission.source} (Territory or Referral)`);
+                    }
+                }
                 
                 // Log admin actions for security audit
                 if (changedBy === 'Admin') {
@@ -5783,6 +6050,193 @@ P003        | reserved  | 2025-08-27</pre>
         function closeDatabasePanel() {
             const panel = document.getElementById('databasePanel');
             panel.style.display = 'none';
+        }
+        
+        // ===== MARKETER MANAGEMENT PANEL =====
+        function showMarketerPanel() {
+          const content = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 5000; max-width: 500px; max-height: 70vh; overflow-y: auto;">
+              <h2 style="margin-top: 0;">💼 Manage Marketers</h2>
+              
+              <div style="margin-bottom: 15px;">
+                <h4>Add New Marketer</h4>
+                <input type="text" id="mkName" placeholder="Name" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px;" />
+                <input type="tel" id="mkPhone" placeholder="Phone (e.g., +234 807 704 2804)" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px;" />
+                <input type="number" id="mkCommission" placeholder="Commission (e.g., 15000)" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px;" />
+                <button onclick="addMarketerFunc()" style="width: 100%; padding: 10px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">➕ Add Marketer</button>
+              </div>
+
+              <h4>Current Marketers:</h4>
+              <div id="marketerList" style="margin: 10px 0; max-height: 200px; overflow-y: auto;"></div>
+
+              <h4>📱 Referral Links</h4>
+              <div id="referralLinksList" style="margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+
+              <button onclick="closeMarketerPanel()" style="width: 100%; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">Close</button>
+            </div>
+            <div onclick="closeMarketerPanel()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 4999;"></div>
+          `;
+          
+          const container = document.createElement('div');
+          container.innerHTML = content;
+          container.id = 'marketerPanelContainer';
+          document.body.appendChild(container);
+          
+          refreshMarketerDisplay();
+          refreshReferralLinks();
+        }
+
+        function closeMarketerPanel() {
+          const container = document.getElementById('marketerPanelContainer');
+          if (container) container.remove();
+        }
+
+        function addMarketerFunc() {
+          const name = document.getElementById('mkName').value;
+          const phone = document.getElementById('mkPhone').value;
+          const commission = document.getElementById('mkCommission').value;
+
+          if (!name || !phone || !commission) {
+            alert('Please fill all fields');
+            return;
+          }
+
+          marketerMgr.addMarketer(name, phone, commission)
+            .then(() => {
+              alert(`✅ ${name} added as marketer`);
+              document.getElementById('mkName').value = '';
+              document.getElementById('mkPhone').value = '';
+              document.getElementById('mkCommission').value = '';
+              refreshMarketerDisplay();
+              refreshReferralLinks();
+            });
+        }
+
+        function refreshMarketerDisplay() {
+          const list = document.getElementById('marketerList');
+          if (!list) return;
+          
+          const marketers = marketerMgr.getAll();
+          list.innerHTML = marketers.map(m => `
+            <div style="padding: 8px; background: #f9f9f9; border-left: 3px solid #17a2b8; margin: 5px 0; border-radius: 3px;">
+              <strong>${m.name}</strong><br/>
+              📱 ${m.phone}<br/>
+              💰 ₦${m.commission.toLocaleString('en-NG')}
+              <button onclick="deleteMarketerFunc('${m.name}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; margin-top: 5px;">Delete</button>
+            </div>
+          `).join('');
+        }
+
+        function deleteMarketerFunc(name) {
+          if (confirm(`Delete ${name}?`)) {
+            marketerMgr.removeMarketer(name);
+            refreshMarketerDisplay();
+            refreshReferralLinks();
+          }
+        }
+
+        function refreshReferralLinks() {
+          const container = document.getElementById('referralLinksList');
+          if (!container) return;
+          
+          const marketers = marketerMgr.getAll();
+          container.innerHTML = marketers.map(m => {
+            const link = referralLinkGen.generateLink(m.name);
+            return `
+              <div style="padding: 8px; background: #f0f0f0; border-left: 3px solid #fd7e14; margin: 5px 0; border-radius: 3px; word-break: break-all;">
+                <strong>${m.name}:</strong><br/>
+                <code style="background: white; padding: 4px; display: block; margin: 5px 0;">${link}</code>
+                <button onclick="copyToClipboard('${link}')" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">📋 Copy</button>
+              </div>
+            `;
+          }).join('');
+        }
+
+        function copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            alert('✅ Link copied to clipboard');
+          });
+        }
+
+        // ===== TERRITORY ASSIGNMENT PANEL =====
+        function showTerritoryPanel() {
+          const allParcels = subdivisionData.features.map(f => f.properties.Text.trim());
+          
+          const content = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 5000; max-width: 500px; max-height: 70vh; overflow-y: auto;">
+              <h2 style="margin-top: 0;">📍 Territory Assignment</h2>
+              
+              <div style="margin-bottom: 15px;">
+                <label>Plot ID:</label>
+                <select id="assignPlot" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px;">
+                  <option value="">Select Plot</option>
+                  ${allParcels.map(p => `<option value="${p}">${p}</option>`).join('')}
+                </select>
+                
+                <label>Assign to Marketer:</label>
+                <select id="assignMarketer" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px;">
+                  <option value="">Select Marketer</option>
+                  ${marketerMgr.getAll().map(m => `<option value="${m.name}">${m.name}</option>`).join('')}
+                </select>
+                
+                <button onclick="assignPlotTerritory()" style="width: 100%; padding: 10px; background: #fd7e14; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">Assign Territory</button>
+              </div>
+
+              <h4>Current Assignments:</h4>
+              <div id="territoryList" style="margin: 10px 0; max-height: 250px; overflow-y: auto;"></div>
+
+              <button onclick="closeTerritoryPanel()" style="width: 100%; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">Close</button>
+            </div>
+            <div onclick="closeTerritoryPanel()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 4999;"></div>
+          `;
+          
+          const container = document.createElement('div');
+          container.innerHTML = content;
+          container.id = 'territoryPanelContainer';
+          document.body.appendChild(container);
+          
+          refreshTerritoryDisplay();
+        }
+
+        function closeTerritoryPanel() {
+          const container = document.getElementById('territoryPanelContainer');
+          if (container) container.remove();
+        }
+
+        function assignPlotTerritory() {
+          const plotId = document.getElementById('assignPlot').value;
+          const marketer = document.getElementById('assignMarketer').value;
+          
+          if (!plotId || !marketer) {
+            alert('Please select both plot and marketer');
+            return;
+          }
+          
+          territoryMgr.assignTerritory(plotId, marketer)
+            .then(() => {
+              alert(`✅ Plot ${plotId} assigned to ${marketer}`);
+              refreshTerritoryDisplay();
+            });
+        }
+
+        function refreshTerritoryDisplay() {
+          const list = document.getElementById('territoryList');
+          if (!list) return;
+          
+          const territories = territoryMgr.getAllTerritories();
+          list.innerHTML = territories.map(t => `
+            <div style="padding: 8px; background: #f9f9f9; border-left: 3px solid #fd7e14; margin: 5px 0; border-radius: 3px;">
+              <strong>${t.plotId}</strong> → ${t.marketer}
+              <button onclick="removeTerritoryFunc('${t.plotId}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; margin-left: 10px;">Remove</button>
+            </div>
+          `).join('');
+        }
+
+        function removeTerritoryFunc(plotId) {
+          if (confirm(`Remove territory for ${plotId}?`)) {
+            territoryMgr.removeTerritory(plotId);
+            refreshTerritoryDisplay();
+          }
         }
         
         // Generate complete database report
