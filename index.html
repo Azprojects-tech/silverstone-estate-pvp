@@ -4548,20 +4548,21 @@
           }
         }
         
-        // Initialize systems
-        const referralSystem = new ReferralSystem();
-        const territoryMgr = new TerritoryManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
-        const marketerMgr = new MarketerManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
-        const commissionCalc = new CommissionCalculator(referralSystem, territoryMgr, marketerMgr);
-        const referralLinkGen = new ReferralLinkGenerator();
-        
         // SIMPLIFIED Google Sheets Configuration - BUSINESS ACCOUNT
+        // MUST BE DEFINED BEFORE using in class constructors below!
         const GOOGLE_SHEETS_CONFIG = {
             spreadsheetId: '1S5DaLtj6ZrZXKfGAuZh2VKjKKDAlHouNYzxn6Sj7UFM', // CORRECTED - Your actual public sheet
             apiKey: 'AIzaSyCkLewazfYqcQ_llw_Adj_mTNK71T2iRL0', // Business API Key - azprojectslimited@gmail.com
             sheetName: 'SILVERSTONE_ESTATE_PARCELS', // UPDATED - New sheet name with all 51 parcels
             sheetUrl: 'https://docs.google.com/spreadsheets/d/1S5DaLtj6ZrZXKfGAuZh2VKjKKDAlHouNYzxn6Sj7UFM/edit?gid=1707318239#gid=1707318239'
         };
+        
+        // Initialize systems
+        const referralSystem = new ReferralSystem();
+        const territoryMgr = new TerritoryManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
+        const marketerMgr = new MarketerManager(GOOGLE_SHEETS_CONFIG.spreadsheetId, GOOGLE_SHEETS_CONFIG.apiKey);
+        const commissionCalc = new CommissionCalculator(referralSystem, territoryMgr, marketerMgr);
+        const referralLinkGen = new ReferralLinkGenerator();
         
         // Enhanced Google Sheets Integration with Change Detection
         let lastSyncTime = localStorage.getItem('lastSyncTime') || '2025-08-28';
